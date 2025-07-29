@@ -1,5 +1,6 @@
 import express from "express";
-import Movie from "../models/movies.models.js";
+import Movie from "../models/movie.model.js";
+import verifyToken from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ router.get('/', async(req, res) => {
     }
 });
 
-router.post('/', async(req, res) => {
+router.post('/', verifyToken, async(req, res) => {
     try {
         const newMovie = new Movie(req.body);
         const savedMovie = await newMovie.save();
@@ -28,7 +29,7 @@ router.post('/', async(req, res) => {
     }
 })
 
-router.put('/:id', async(req, res) => {
+router.put('/:id', verifyToken, async(req, res) => {
     try {
         const updatedMovie = await Movie.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(updatedMovie);
@@ -40,7 +41,7 @@ router.put('/:id', async(req, res) => {
     }
 })
 
-router.delete('/:id', async(req, res) => {
+router.delete('/:id', verifyToken, async(req, res) => {
     try {
         await Movie.findByIdAndDelete(req.params.id);
         res.json({
