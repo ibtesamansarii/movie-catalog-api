@@ -1,6 +1,7 @@
 import express from "express";
 import MoviePoster from "../models/moviePoster.model.js";
 import upload from "../middlewares/multer.middleware.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const router = express().router;
 
@@ -21,8 +22,14 @@ router.post("/", upload.single("poster"), async(req, res) => {
         if(!poster) {
             return res.status(400).json({ error: "Poster is required" });
         }
+        
+        // upload to cloudinary
+        const result = await uploadOnCloudinary(req.file.path);
+        if (!result) {
+            return res.status(500).json({ error: "Failed to upload poster" });
+        }
 
-        const moviePoster = new MoviePoster({ movieName, poster });
+        const moviePoster = new MoviePoster({ movieName, poster: result.secure_url });
         await moviePoster.save();
 
         res.status(201).json(moviePoster);
@@ -33,14 +40,19 @@ router.post("/", upload.single("poster"), async(req, res) => {
 
 router.put("/:id", upload.single("poster"), async(req, res) => {
     try {
-        const { movieName } = req.body;
-        const poster = req.file? req.file.filename : undefined;
-
         const updateData = {};
         if (movieName) updateData.movieName = movieName;
-        if (poster) updateData.poster = poster;
 
-        const updatedMovie = await MoviePoster.findByIdAndUpdate(req.params.id,updateData,{ new: true });
+        if (req.file) {
+            // upload to cloudinary
+            const result = await uploadOnCloudinary(req.file.path);
+            if (!result) {
+                return res.status(500).json({ error: "Failed to upload poster" });
+            }
+            updateData.poster = result.secure_url; // save cloudinary URL
+        }
+
+        const updatedMovie = await MoviePoster.findByIdAndUpdate( req.params.id, updateData, { new: true } );
         res.json(updatedMovie);
     } catch (err) {
         res.status(400).json({
